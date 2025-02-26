@@ -2,7 +2,7 @@ import boto3
 import json
 import base64
 
-s3 = boto3.client('s3', region_name="us-east-1")
+s3 = boto3.client('s3', region_name="ap-southeast-2")
 BUCKET_NAME = "dinuka-tts-audio-bucket"
 
 def lambda_handler(event, context):
