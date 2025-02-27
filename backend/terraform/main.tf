@@ -29,31 +29,36 @@ resource "aws_iam_role" "lambda_exec" {
       Principal = { Service = "lambda.amazonaws.com" }
     }]
   })
-
-  inline_policy {
-    name = "LambdaPollyAccess"
-    policy = jsonencode({
-      Version = "2012-10-17"
-      Statement = [{
-        Effect   = "Allow"
-        Action   = "polly:SynthesizeSpeech"
-        Resource = "*"
-      }]
-    })
-  }
-
-  inline_policy {
-    name = "LambdaInvokePolicy"
-    policy = jsonencode({
-      Version = "2012-10-17"
-      Statement = [{
-        Effect = "Allow"
-        Action = "lambda:InvokeFunction"
-        Resource = aws_lambda_function.s3_upload.arn
-      }]
-    })
-  }
 }
+
+resource "aws_iam_role_policy" "lambda_polly_access" {
+  name = "LambdaPollyAccess"
+  role = aws_iam_role.lambda_exec.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect   = "Allow"
+      Action   = "polly:SynthesizeSpeech"
+      Resource = "*"
+    }]
+  })
+}
+
+resource "aws_iam_role_policy" "lambda_invoke_policy" {
+  name = "LambdaInvokePolicy"
+  role = aws_iam_role.lambda_exec.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect = "Allow"
+      Action = "lambda:InvokeFunction"
+      Resource = aws_lambda_function.s3_upload.arn
+    }]
+  })
+}
+
 
 # CloudWatch logging policy for Lambda execution role
 resource "aws_iam_role_policy_attachment" "lambda_logs" {
@@ -73,18 +78,20 @@ resource "aws_iam_role" "s3_upload_role" {
       Principal = { Service = "lambda.amazonaws.com" }
     }]
   })
+}
 
-  inline_policy {
-    name = "S3WriteAccess"
-    policy = jsonencode({
-      Version = "2012-10-17"
-      Statement = [{
-        Effect   = "Allow"
-        Action   = ["s3:PutObject"]
-        Resource = "${aws_s3_bucket.tts_audio_bucket.arn}/*"
-      }]
-    })
-  }
+resource "aws_iam_role_policy" "s3_write_access" {
+  name = "S3WriteAccess"
+  role = aws_iam_role.s3_upload_role.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect   = "Allow"
+      Action   = ["s3:PutObject"]
+      Resource = "${aws_s3_bucket.tts_audio_bucket.arn}/*"
+    }]
+  })
 }
 
 # Lambda Function for S3 Upload
