@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import axios, { AxiosResponse } from "axios";
+import axios from "axios";
 
 interface TTSRequest {
   text: string;
