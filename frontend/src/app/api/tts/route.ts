@@ -5,10 +5,6 @@ interface TTSRequest {
   text: string;
 }
 
-interface TTSResponse {
-  file_url: string;
-}
-
 export async function POST(request: Request) {
   const lambdaUrl = `${process.env.NEXT_PUBLIC_LAMBDA_API_URL}`;
   const apiKey = process.env.NEXT_PUBLIC_API_KEY;
