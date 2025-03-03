@@ -1,8 +1,13 @@
 import { NextResponse } from 'next/server'
-import axios from "axios";
+import axios, { AxiosResponse } from "axios";
 
 interface TTSRequest {
   text: string;
+}
+
+interface TTSResponse {
+  audio: string;
+  body?: string;
 }
 
 export async function POST(request: Request) {
@@ -14,7 +19,7 @@ export async function POST(request: Request) {
   const body: TTSRequest = await request.json();
 
   try {
-    const response = await axios.post<any>(
+    const response = await axios.post<TTSResponse>(
       lambdaUrl,
       { text: body.text },
       {
@@ -31,17 +36,23 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ file_url: `data:audio/mp3;base64,${audioData.audio}` });
 
-  } catch (error: any) {
-    console.error("Full error details:", {
-      message: error.message,
-      status: error.response?.status,
-      data: error.response?.data,
-      requestUrl: lambdaUrl,
-      requestBody: body
-    });
+  } catch (error: unknown) {
+    if (axios.isAxiosError(error)) {
+      console.error("Full error details:", {
+        message: error.message,
+        status: error.response?.status,
+        data: error.response?.data,
+        requestUrl: lambdaUrl,
+        requestBody: body
+      });
+      return NextResponse.json(
+        { error: "Failed to process text-to-speech", details: error.response?.data },
+        { status: error.response?.status || 500 }
+      );
+    }
     return NextResponse.json(
-      { error: "Failed to process text-to-speech", details: error.response?.data },
-      { status: error.response?.status || 500 }
+      { error: "An unexpected error occurred" },
+      { status: 500 }
     );
   }
 }
