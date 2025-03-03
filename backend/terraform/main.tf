@@ -16,6 +16,15 @@ resource "aws_s3_bucket_ownership_controls" "tts_audio_bucket" {
   }
 }
 
+# AWS Lambda Api Gateway permission
+resource "aws_lambda_permission" "api_gateway" {
+  statement_id  = "AllowAPIGatewayInvoke"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.text_to_speech.function_name
+  principal     = "apigateway.amazonaws.com"
+  source_arn    = "${aws_api_gateway_rest_api.tts_api.execution_arn}/*/*"
+}
+
 
 # IAM Role for Text-to-Speech Lambda
 resource "aws_iam_role" "lambda_exec" {
@@ -59,6 +68,25 @@ resource "aws_iam_role_policy" "lambda_invoke_policy" {
   })
 }
 
+resource "aws_iam_role_policy" "lambda_cloudwatch_logs" {
+  name = "lambda_cloudwatch_logs"
+  role = aws_iam_role.lambda_exec.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "logs:CreateLogGroup",
+          "logs:CreateLogStream",
+          "logs:PutLogEvents"
+        ]
+        Resource = "arn:aws:logs:*:*:*"
+      }
+    ]
+  })
+}
 
 # CloudWatch logging policy for Lambda execution role
 resource "aws_iam_role_policy_attachment" "lambda_logs" {
@@ -180,3 +208,60 @@ resource "aws_api_gateway_usage_plan_key" "tts_usage_plan_key" {
   key_type      = "API_KEY"
   usage_plan_id = aws_api_gateway_usage_plan.tts_usage_plan.id
 }
+
+resource "aws_api_gateway_method_settings" "all" {
+  rest_api_id = aws_api_gateway_rest_api.tts_api.id
+  stage_name  = aws_api_gateway_stage.prod.stage_name
+  method_path = "*/*"
+
+  settings {
+    metrics_enabled = true
+    logging_level   = "INFO"
+  }
+}
+
+resource "aws_api_gateway_account" "api_gateway_account" {
+  cloudwatch_role_arn = aws_iam_role.cloudwatch.arn
+}
+
+resource "aws_iam_role" "cloudwatch" {
+  name = "api_gateway_cloudwatch_role"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action = "sts:AssumeRole"
+        Effect = "Allow"
+        Principal = {
+          Service = "apigateway.amazonaws.com"
+        }
+      }
+    ]
+  })
+}
+
+resource "aws_iam_role_policy" "cloudwatch" {
+  name = "api_gateway_cloudwatch_policy"
+  role = aws_iam_role.cloudwatch.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "logs:CreateLogGroup",
+          "logs:CreateLogStream",
+          "logs:DescribeLogGroups",
+          "logs:DescribeLogStreams",
+          "logs:PutLogEvents",
+          "logs:GetLogEvents",
+          "logs:FilterLogEvents"
+        ]
+        Resource = "*"
+      }
+    ]
+  })
+}
+
