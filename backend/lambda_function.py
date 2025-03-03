@@ -5,7 +5,8 @@ import uuid
 
 def lambda_handler(event, context):
     try:
-        text = event.get('text', 'Hello, this is a test.')
+        body = json.loads(event['body']) if isinstance(event['body'], str) else event['body']
+        text = body['text']
         polly = boto3.client('polly')
         lambda_client = boto3.client('lambda')
 
